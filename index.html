@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glassmorphic Image Resizer & Resolution Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-light: linear-gradient(135deg, #a8edea, #fed6e3);
+      --bg-dark: linear-gradient(135deg, #434343, #262626);
+      --glass-light: rgba(255, 255, 255, 0.1);
+      --glass-dark: rgba(0, 0, 0, 0.2);
+      --border-light: rgba(255, 255, 255, 0.3);
+      --border-dark: rgba(255, 255, 255, 0.1);
+      --text-light: #f0f0f0;
+      --text-dark: #e0e0e0;
+      --radius: 20px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+    body {
+      min-height: 100vh;
+      background: var(--bg-light);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      transition: background 0.3s;
+    }
+    body.dark-mode { background: var(--bg-dark); }
+    .glass-card {
+      background: var(--glass-light);
+      border-radius: 20px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-light);
+      padding: 30px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+      color: var(--text-light);
+      transition: background 0.3s, border 0.3s, color 0.3s;
+      position: relative;
+    }
+    body.dark-mode .glass-card {
+      background: var(--glass-dark);
+      border: 1px solid var(--border-dark);
+      color: var(--text-dark);
+    }
+    h1 { text-align: center; margin-bottom: 20px; font-weight: 500; }
+    label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 0.9rem; }
+    input[type=file], select, button, input[type=range] {
+      width: 100%; padding: 10px 15px; margin-bottom: 20px;
+      border: none; border-radius: 10px; font-size: 1rem; outline: none;
+      background: rgba(255,255,255,0.2); color: #fff; transition: background 0.3s;
+    }
+    input[type=range] { -webkit-appearance: none; height: 6px; padding: 0; background: rgba(255,255,255,0.2); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,0.7); cursor: pointer; }
+    button { background: rgba(255,255,255,0.3); cursor: pointer; font-weight: 600; }
+    button:hover { background: rgba(255,255,255,0.5); }
+    .icon-btn {
+      background: rgba(255,255,255,0.3);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.3s;
+      color: #fff;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.5); }
+    .theme-toggle { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+    .page { display: none; }
+    .active { display: block; }
+    .result img { max-width: 100%; margin-bottom: 10px; border-radius: var(--radius); }
+    .download-btn { margin: 20px auto 0; }
+    #backBtn { position: absolute; top: 20px; left: 20px; }
+    .icon-btn svg { stroke: currentColor; }
+  </style>
+</head>
+<body>
+  <div class="glass-card">
+    <div class="theme-toggle">
+      <button id="themeBtn" class="icon-btn" title="Toggle theme">
+        <i data-feather="moon"></i>
+      </button>
+    </div>
+    <div id="formPage" class="page active">
+      <h1>Image Resizer</h1>
+      <label for="imageInput">Choose an image</label><input type="file" id="imageInput" accept="image/*" />
+      <label for="sizeSelect">Select size</label><select id="sizeSelect">
+        <option value="800x600">800 x 600</option>
+        <option value="1024x768">1024 x 768</option>
+        <option value="1280x720">1280 x 720</option>
+        <option value="1920x1080">1920 x 1080</option>
+      </select>
+      <label for="orientationSelect">Select orientation</label><select id="orientationSelect">
+        <option value="hStretch">Horizontal (stretching)</option>
+        <option value="vStretch">Vertical (stretching)</option>
+        <option value="hCrop">Horizontal (centers & crops)</option>
+        <option value="vCrop">Vertical (centers & crops)</option>
+      </select>
+      <label for="qualitySelect">Select quality</label><select id="qualitySelect">
+        <option value="1.0">High</option>
+        <option value="0.8">Medium</option>
+        <option value="0.6">Low</option>
+      </select>
+      <label for="roundingSelect">Rounded corners?</label><select id="roundingSelect">
+        <option value="none">No</option>
+        <option value="rounded">Yes</option>
+      </select>
+      <div id="sliderContainer" style="display:none;">
+        <label for="cornerSlider">Corner Radius: <span id="radiusValue">20</span>px</label>
+        <input type="range" id="cornerSlider" min="0" max="200" value="20" />
+      </div>
+      <button id="processBtn">Process Image</button>
+    </div>
+    <div id="resultPage" class="page">
+      <h1>Result</h1>
+      <button id="backBtn" class="icon-btn" title="Go back">
+        <i data-feather="arrow-left"></i>
+      </button>
+      <div class="result" id="resultArea"></div>
+    </div>
+  </div>
+  <script src="https://unpkg.com/feather-icons"></script>
+  <script>
+    // Initialize feather icons
+    feather.replace();
+    
+    // Theme toggle
+    const themeBtn = document.getElementById('themeBtn');
+    themeBtn.addEventListener('click', () => {
+      const dark = document.body.classList.toggle('dark-mode');
+      themeBtn.innerHTML = ''; 
+      const icon = dark ? 'sun' : 'moon';
+      themeBtn.insertAdjacentHTML('beforeend', `<i data-feather="${icon}"></i>`);
+      feather.replace();
+    });
+    
+    // Show/hide slider
+    const roundingSelect = document.getElementById('roundingSelect');
+    const sliderContainer = document.getElementById('sliderContainer');
+    const radiusValue = document.getElementById('radiusValue');
+    roundingSelect.addEventListener('change', () => {
+      sliderContainer.style.display = roundingSelect.value === 'rounded' ? 'block' : 'none';
+    });
+    document.getElementById('cornerSlider').addEventListener('input', function() {
+      document.documentElement.style.setProperty('--radius', this.value + 'px');
+      radiusValue.textContent = this.value;
+    });
+    
+    // Draw rounded rectangle path
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+    }
+    
+    // Process image and show result
+    document.getElementById('processBtn').addEventListener('click', () => {
+      const file = document.getElementById('imageInput').files[0];
+      if (!file) return alert('Please choose an image.');
+      const [w,h] = document.getElementById('sizeSelect').value.split('x').map(Number);
+      const orient = document.getElementById('orientationSelect').value;
+      const quality = parseFloat(document.getElementById('qualitySelect').value);
+      const rounding = roundingSelect.value;
+      const radius = parseInt(document.getElementById('cornerSlider').value, 10);
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image(); img.onload = () => {
+          let destW=w,destH=h, srcX=0,srcY=0,srcW=img.width,srcH=img.height;
+          if(orient==='hCrop'||orient==='vCrop'){
+            if(orient==='vCrop'){destW=h;destH=w;}
+            const da=destW/destH, sa=img.width/img.height;
+            if(sa>da){srcH=img.height;srcW=img.height*da;srcX=(img.width-srcW)/2;} 
+            else {srcW=img.width;srcH=img.width/da;srcY=(img.height-srcH)/2;}
+          } else if(orient==='vStretch'){destW=h;destH=w;}
+          const canvas=document.createElement('canvas');canvas.width=destW;canvas.height=destH;
+          const ctx=canvas.getContext('2d');
+          if(rounding==='rounded'){ctx.beginPath();roundRect(ctx,0,0,destW,destH,radius);ctx.clip();}
+          if(orient.endsWith('Crop'))ctx.drawImage(img,srcX,srcY,srcW,srcH,0,0,destW,destH); 
+          else ctx.drawImage(img,0,0,destW,destH);
+          const mime = rounding==='rounded' ? 'image/png' : (file.type==='image/png'?'image/png':'image/jpeg');
+          const dataURL = canvas.toDataURL(mime,quality);
+          document.getElementById('formPage').classList.remove('active');
+          document.getElementById('resultPage').classList.add('active');
+          const resArea=document.getElementById('resultArea');resArea.innerHTML='';
+          const outImg=document.createElement('img');outImg.src=dataURL;resArea.appendChild(outImg);
+          const link=document.createElement('a');link.href=dataURL;link.download=`resized.${mime.split('/')[1]}`;link.className='icon-btn download-btn';
+          link.innerHTML='<i data-feather="download"></i>';resArea.appendChild(link);
+          feather.replace();
+        };
+        img.src=e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    // Back button
+    document.getElementById('backBtn').addEventListener('click', ()=>{
+      document.getElementById('resultPage').classList.remove('active');
+      document.getElementById('formPage').classList.add('active');
+    });
+  </script>
+</body>
+</html>
